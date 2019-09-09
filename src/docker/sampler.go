@@ -24,19 +24,20 @@ func (c ContainerSampler) Populate(ms *metric.Set) error {
 		MetricContainerID("123456"),
 		MetricState("running"),
 		{"label.docker.meta", metric.ATTRIBUTE, "label-value"},
+		{"label.docker.io.kubernetes.pod.namespace", metric.ATTRIBUTE, "default"},
 		MetricCPUPercent(rndCpu),
 		MetricCPUSystemPercent(rndCpu * 0.2),
 		MetricCPUUserPercent(rndCpu * 0.8),
 		MetricMemoryVirtualSizeBytes(10000000),
 		MetricMemoryResidentSizeBytes(8000000),
-		MetricIOReadCountPerSecond(0), // take from blkio_stats
-		MetricIOWriteCountPerSecond(0),
-		MetricIOReadBytesPerSecond(0),
-		MetricIOWriteBytesPerSecond(0),
-		MetricIOTotalReadCount(0),
-		MetricIOTotalWriteCount(0),
-		MetricIOTotalReadBytes(0),
-		MetricIOTotalWriteBytes(0),
+		MetricIOReadCountPerSecond(rand.Intn(10000000)), // take from blkio_stats
+		MetricIOWriteCountPerSecond(rand.Intn(10000000)),
+		MetricIOReadBytesPerSecond(rand.Intn(10000000)),
+		MetricIOWriteBytesPerSecond(rand.Intn(10000000)),
+		MetricIOTotalReadCount(rand.Intn(10000000)),
+		MetricIOTotalWriteCount(rand.Intn(10000000)),
+		MetricIOTotalReadBytes(rand.Intn(10000000)),
+		MetricIOTotalWriteBytes(rand.Intn(10000000)),
 		MetricPIDs(1),
 	} {
 		if err := ms.SetMetric(metric.Name, metric.Value, metric.Type); err != nil {
