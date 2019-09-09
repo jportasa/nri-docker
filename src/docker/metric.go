@@ -16,7 +16,7 @@ var (
 	MetricContainerImage          = metricFunc("image", metric.ATTRIBUTE)
 	MetricContainerImageName      = metricFunc("imageName", metric.ATTRIBUTE)
 	MetricContainerName           = metricFunc("name", metric.ATTRIBUTE)
-	MetricContainerID             = metricFunc("id", metric.ATTRIBUTE)
+	MetricContainerID             = metricFunc("containerId", metric.ATTRIBUTE)
 	MetricState                   = metricFunc("state", metric.ATTRIBUTE)
 	MetricCPUPercent              = metricFunc("cpuPercent", metric.GAUGE)
 	MetricCPUSystemPercent        = metricFunc("cpuSystemPercent", metric.GAUGE)
