@@ -2,6 +2,7 @@ package docker
 
 import (
 	"math/rand"
+	"time"
 
 	"github.com/newrelic/infra-integrations-sdk/data/metric"
 )
@@ -14,6 +15,7 @@ type ContainerSampler struct {
 }
 
 func (c ContainerSampler) Populate(ms *metric.Set) error {
+	rand.Seed(time.Now().UTC().UnixNano())
 	rndCpu := 10 + rand.Float64()*10
 	for _, metric := range []Metric{
 		MetricCommandLine("/command-exec"),
