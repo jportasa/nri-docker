@@ -16,7 +16,8 @@ import (
 )
 
 const (
-	cgroupPath = "/sys/fs/cgroup"
+	cgroupPath        = "/sys/fs/cgroup"
+	hostContainerPath = "/host" // TODO: makeconfigurable
 )
 
 type CGroupsProvider struct {
@@ -41,7 +42,7 @@ func (cg *CGroupsProvider) PersistStats() error {
 // assuming the integration is running in a container
 func hostFolder(folders ...string) string {
 	insideHostFile := path.Join(folders...)
-	insideContainerFile := path.Join("/host", insideHostFile) // TODO: make the /host configurable
+	insideContainerFile := path.Join(hostContainerPath, insideHostFile)
 	var err error
 	if _, err = os.Stat(insideContainerFile); err == nil {
 		return insideContainerFile

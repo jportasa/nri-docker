@@ -34,6 +34,9 @@ func attributes(container types.Container) []Metric {
 	var cname string
 	if len(container.Names) > 0 {
 		cname = container.Names[0]
+		if len(cname) > 0 && cname[0] == '/' {
+			cname = cname[1:]
+		}
 	}
 	return []Metric{
 		MetricCommandLine(container.Command),
@@ -71,7 +74,8 @@ func (cs *ContainerSampler) statsMetrics(containerID string) []Metric {
 		memLimits = 0
 	}
 	return []Metric{
-		MetricPIDs(float64(stats.PidsStats.Current)),
+		MetricProcessCount(float64(stats.PidsStats.Current)),
+		MetricProcessCountLimit(float64(stats.PidsStats.Limit)),
 		MetricCPUPercent(cpu.CPU),
 		MetricCPUKernelPercent(cpu.Kernel),
 		MetricCPUUserPercent(cpu.User),
@@ -178,6 +182,27 @@ func (cs *ContainerSampler) SampleAll(i *integration.Integration) error {
 			log.Debug("error populating container %v labels: %s", container.ID, err)
 			continue
 		}
+
+		var fake = func(name string, value interface{}) Metric {
+			return Metric{Name: name, Type: metric.ATTRIBUTE, Value: value}
+		}
+
+		// FAKE DATA STARTS HERE
+		// populate fake metrics
+		populate(ms, []Metric{
+			fake("linuxDistribution", "CentOS Linux 7 (Core)"),
+			fake("agentVersion", "1.5.37"),
+			fake("systemMemoryBytes", "1927303168"),
+			fake("coreCount", "2"),
+			fake("fullHostname", "ohai1.new-domain.com"),
+			fake("kernelVersion", "3.10.0-957.27.2.el7.x86_64"),
+			fake("processorCount", "2"),
+			{Name: "warningViolationCount", Type: metric.GAUGE, Value: 0},
+			fake("agentName", "Infrastructure"),
+			fake("operatingSystem", "linux"),
+			{Name: "criticalViolationCount", Type: metric.GAUGE, Value: 0},
+			fake("instanceType", "unknown"),
+		})
 
 	}
 	return nil
