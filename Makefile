@@ -20,7 +20,7 @@ clean:
 
 validate-deps:
 	@echo "=== $(INTEGRATION) === [ validate-deps ]: installing validation dependencies..."
-	@go get -v $(VALIDATE_DEPS)
+	@GOOS=linux go get -v $(VALIDATE_DEPS)
 
 validate-only:
 	@printf "=== $(INTEGRATION) === [ validate ]: running gofmt... "
@@ -59,7 +59,7 @@ compile-deps:
 
 bin/$(BINARY_NAME):
 	@echo "=== $(INTEGRATION) === [ compile ]: building $(BINARY_NAME)..."
-	@go build -v -o bin/$(BINARY_NAME) $(GO_FILES)
+	@GOOS=linux go build -v -o bin/$(BINARY_NAME) $(GO_FILES)
 
 compile: compile-deps bin/$(BINARY_NAME)
 
