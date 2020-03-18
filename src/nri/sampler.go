@@ -43,7 +43,7 @@ func NewSampler(hostRoot, cgroupPath string) (*ContainerSampler, error) {
 	// docker client to list and inspect containers
 	docker, err := client.NewEnvClient()
 	if err != nil {
-		return *ContainerSampler{}, err
+		return nil, err
 	}
 	defer docker.Close()
 	docker.UpdateClientVersion(dockerClientVersion)
