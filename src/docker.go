@@ -26,6 +26,10 @@ var (
 	args argumentList
 )
 
+type Sampler interface {
+	SampleAll(*integration.Integration) error
+}
+
 func main() {
 	// Create Integration
 	i, err := integration.New(integrationName, integrationVersion, integration.Args(&args))
@@ -36,17 +40,16 @@ func main() {
 
 	log.SetupLogging(args.Verbose)
 
+	var sampler Sampler
+
 	if args.Fargate {
-		cs := nri.FargateSampler{}
-		exitOnErr(err)
-		exitOnErr(cs.SampleAll(i))
-		exitOnErr(i.Publish())
+		sampler = &nri.FargateSampler{}
 	} else {
-		cs, err := nri.NewSampler(args.HostRoot, args.CgroupPath)
+		sampler, err = nri.NewSampler(args.HostRoot, args.CgroupPath)
 		exitOnErr(err)
-		exitOnErr(cs.SampleAll(i))
-		exitOnErr(i.Publish())
 	}
+	exitOnErr(sampler.SampleAll(i))
+	exitOnErr(i.Publish())
 }
 
 func exitOnErr(err error) {

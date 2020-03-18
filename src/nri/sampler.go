@@ -38,12 +38,12 @@ type dockerClient interface {
 // NewSampler returns a ContainerSampler instance. The hostRoot argument is used only if the integration is
 // executed inside a container, and must point to the shared folder that allows accessing to the host root
 // folder (usually /host)
-func NewSampler(hostRoot, cgroupPath string) (ContainerSampler, error) {
+func NewSampler(hostRoot, cgroupPath string) (*ContainerSampler, error) {
 	// instantiating internal components
 	// docker client to list and inspect containers
 	docker, err := client.NewEnvClient()
 	if err != nil {
-		return ContainerSampler{}, err
+		return *ContainerSampler{}, err
 	}
 	defer docker.Close()
 	docker.UpdateClientVersion(dockerClientVersion)
@@ -54,13 +54,13 @@ func NewSampler(hostRoot, cgroupPath string) (ContainerSampler, error) {
 		log.NewStdErr(true),
 		60*time.Second)
 	if err != nil {
-		return ContainerSampler{}, err
+		return &ContainerSampler{}, err
 	}
 
 	// Raw metrics fetcher to get the raw metrics from the system (cgroups and proc fs)
 	rawFetcher := raw.NewFetcher(hostRoot, cgroupPath, raw.GetMountsFilePath())
 
-	return ContainerSampler{
+	return &ContainerSampler{
 		metrics: biz.NewProcessor(store, rawFetcher, docker),
 		docker:  docker,
 		store:   store,
