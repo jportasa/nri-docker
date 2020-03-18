@@ -57,7 +57,7 @@ func (e *FargateFetcher) InspectContainer(containerID string) (docker.Container,
 
 	err = e.fetchTaskResponse(&taskResponse)
 	if err != nil {
-		return nil, err
+		return docker.Container{}, err
 	}
 
 	for _, container := range taskResponse.Containers {
@@ -67,6 +67,8 @@ func (e *FargateFetcher) InspectContainer(containerID string) (docker.Container,
 		e.store.Set(container.ID, container)
 		return containerResponseToDocker(container), nil
 	}
+
+	return docker.Container{}, nil
 }
 
 func (e * FargateFetcher) fetchTaskResponse(taskResponse *TaskResponse) error  {
