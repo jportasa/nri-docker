@@ -40,6 +40,70 @@ func NewFargateFetcher(c *http.Client, l log.Logger) (*FargateFetcher, error) {
 	return &FargateFetcher{client: c, store: store, logger: l}, nil
 }
 
+func (e *FargateFetcher) InspectContainer(containerID string) (docker.Container, error) {
+	defer func() {
+		if err := e.store.Save(); err != nil {
+			log.Error("persisting previous metrics: %v", err)
+		}
+	}()
+	var taskResponse TaskResponse
+	var containerResponse ContainerResponse
+
+	// Try to load container from the cache store.
+	_, err := e.store.Get(containerID, &containerResponse)
+	if err == nil {
+		return containerResponseToDocker(containerResponse), nil
+	}
+
+	err = e.fetchTaskResponse(&taskResponse)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, container := range taskResponse.Containers {
+		if container.ID != containerID {
+			continue
+		}
+		e.store.Set(container.ID, container)
+		return containerResponseToDocker(container), nil
+	}
+}
+
+func (e * FargateFetcher) fetchTaskResponse(taskResponse *TaskResponse) error  {
+	endpoint, ok := TaskStatsEndpoint()
+	if !ok {
+		return errors.New("could not find ECS container metadata URI")
+	}
+
+	response, err := metadataResponse(e.client, endpoint)
+	if err != nil {
+		return fmt.Errorf(
+			"error when sending request to ECS task metadata endpoint (%s): %v",
+			endpoint,
+			err,
+		)
+	}
+
+	err = json.Unmarshal(response, taskResponse)
+	if err != nil {
+		return fmt.Errorf("error unmarshalling ECS task: %v", err)
+	}
+	e.logger.Infof("task metadata response from %s: %s", endpoint, string(response))
+	return nil
+}
+
+func containerResponseToDocker(container ContainerResponse) docker.Container {
+	return docker.Container{
+		ID:         container.ID,
+		Names:      []string{container.Name},
+		Image:      container.Image,
+		ImageID:    container.ImageID,
+		Created:    container.CreatedAt.Unix(),
+		Labels:     container.Labels,
+		Status:     container.KnownStatus,
+	}
+}
+
 // GetContainerMetrics returns Docker metrics from inside a Fargate container.
 // It captured the ECS container metadata endpoint from the environment variable defined by
 // `containerMetadataEnvVar`.

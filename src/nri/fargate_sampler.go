@@ -47,6 +47,13 @@ func (f *FargateSampler) SampleAll(i *integration.Integration) error {
 		populate(ms, memory(&bizMetrics.Memory))
 		populate(ms, pids(&bizMetrics.Pids))
 		populate(ms, blkio(&bizMetrics.BlkIO))
+
+		containerMetadata, err := fetcher.InspectContainer(containerID)
+		if err != nil {
+			i.Logger().Errorf("could not find metadata for container %s: %v", containerID, err)
+		}
+		populate(ms, attributes(containerMetadata))
+		populate(ms, labels(containerMetadata))
 	}
 	return nil
 }
