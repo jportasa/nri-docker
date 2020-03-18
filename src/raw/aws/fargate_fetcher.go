@@ -21,15 +21,16 @@ type FargateStats map[string]*docker.Stats
 
 // FargateFetcher fetches metrics from Fargate endpoints in AWS ECS.
 type FargateFetcher struct {
-	client      *http.Client
-	store       persist.Storer
-	logger      log.Logger
-	latestFetch time.Time
+	client         *http.Client
+	cpuStore       persist.Storer
+	containerStore persist.Storer
+	logger         log.Logger
+	latestFetch    time.Time
 }
 
 // NewFargateFetcher creates a new FargateFetcher with the given HTTP client.
 func NewFargateFetcher(c *http.Client, l log.Logger) (*FargateFetcher, error) {
-	store, err := persist.NewFileStore( // TODO: make the following options configurable
+	cpuStore, err := persist.NewFileStore(
 		persist.DefaultPath("fargate_container_cpus"),
 		log.NewStdErr(true),
 		60*time.Second)
@@ -37,22 +38,31 @@ func NewFargateFetcher(c *http.Client, l log.Logger) (*FargateFetcher, error) {
 		return nil, err
 	}
 
-	return &FargateFetcher{client: c, store: store, logger: l}, nil
+	containerStore, err := persist.NewFileStore(
+		persist.DefaultPath("fargate_container_metadata"),
+		log.NewStdErr(true),
+		60*time.Second)
+	if err != nil {
+		return nil, err
+	}
+
+	return &FargateFetcher{client: c, cpuStore: cpuStore, containerStore: containerStore, logger: l}, nil
 }
 
 // InspectContainer looks up for metadata of a container given a containerID.
 func (e *FargateFetcher) InspectContainer(containerID string) (docker.Container, error) {
 	defer func() {
-		if err := e.store.Save(); err != nil {
-			log.Error("persisting previous metrics: %v", err)
+		if err := e.containerStore.Save(); err != nil {
+			e.logger.Errorf("persisting previous metrics: %v", err)
 		}
 	}()
 	var taskResponse TaskResponse
 	var containerResponse ContainerResponse
 
-	// Try to load container from the cache store.
-	_, err := e.store.Get(containerID, &containerResponse)
+	// Try to load container from the cache cpuStore.
+	_, err := e.containerStore.Get(containerID, &containerResponse)
 	if err == nil {
+		e.logger.Infof("found container %s in cache cpuStore", containerID)
 		return containerResponseToDocker(containerResponse), nil
 	}
 
@@ -65,7 +75,7 @@ func (e *FargateFetcher) InspectContainer(containerID string) (docker.Container,
 		if container.ID != containerID {
 			continue
 		}
-		e.store.Set(container.ID, container)
+		e.containerStore.Set(container.ID, container)
 		return containerResponseToDocker(container), nil
 	}
 
@@ -164,7 +174,7 @@ func (e *FargateFetcher) BizMetricsFromDocker(containerID string, ds *docker.Sta
 
 	// Requires some calculation over past reading to be able to determine
 	// the percentages.
-	s.CPU = cpuFromDocker(containerID, e.latestFetch, ds.CPUStats, e.store)
+	s.CPU = cpuFromDocker(containerID, e.latestFetch, ds.CPUStats, e.cpuStore)
 
 	return s
 }
@@ -203,7 +213,7 @@ var previous struct {
 
 func cpuFromDocker(containerID string, fetchTime time.Time, dockerCPU docker.CPUStats, store persist.Storer) biz.CPU {
 	cpu := biz.CPU{}
-	// store current metrics to be the "previous" metrics in the next CPU sampling
+	// cpuStore current metrics to be the "previous" metrics in the next CPU sampling
 	defer func() {
 		previous.Time = fetchTime.Unix()
 		previous.CPU = dockerCPU

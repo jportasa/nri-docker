@@ -51,6 +51,7 @@ func (f *FargateSampler) SampleAll(i *integration.Integration) error {
 		containerMetadata, err := fetcher.InspectContainer(containerID)
 		if err != nil {
 			i.Logger().Errorf("could not find metadata for container %s: %v", containerID, err)
+			continue
 		}
 		populate(ms, attributes(containerMetadata))
 		populate(ms, labels(containerMetadata))
