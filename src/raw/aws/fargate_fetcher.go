@@ -40,6 +40,7 @@ func NewFargateFetcher(c *http.Client, l log.Logger) (*FargateFetcher, error) {
 	return &FargateFetcher{client: c, store: store, logger: l}, nil
 }
 
+// InspectContainer looks up for metadata of a container given a containerID.
 func (e *FargateFetcher) InspectContainer(containerID string) (docker.Container, error) {
 	defer func() {
 		if err := e.store.Save(); err != nil {
@@ -95,15 +96,18 @@ func (e *FargateFetcher) fetchTaskResponse(taskResponse *TaskResponse) error {
 }
 
 func containerResponseToDocker(container ContainerResponse) docker.Container {
-	return docker.Container{
+	c :=  docker.Container{
 		ID:      container.ID,
 		Names:   []string{container.Name},
 		Image:   container.Image,
 		ImageID: container.ImageID,
-		Created: container.CreatedAt.Unix(),
 		Labels:  container.Labels,
 		Status:  container.KnownStatus,
 	}
+	if created := container.CreatedAt; created != nil {
+		c.Created = created.Unix()
+	}
+	return c
 }
 
 // GetContainerMetrics returns Docker metrics from inside a Fargate container.
