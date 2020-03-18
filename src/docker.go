@@ -26,6 +26,7 @@ var (
 	args argumentList
 )
 
+// Sampler abstracts away different types that can sample that through an integration.Integration instance.
 type Sampler interface {
 	SampleAll(*integration.Integration) error
 }
