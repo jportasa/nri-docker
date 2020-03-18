@@ -14,7 +14,7 @@ type argumentList struct {
 	NriCluster string `default:"" help:"Optional. Cluster name"`
 	HostRoot   string `default:"/host" help:"If the integration is running from a container, the mounted folder pointing to the host root folder"`
 	CgroupPath string `default:"" help:"Optional. The path where cgroup is mounted."`
-	Fargate    bool   `default:"false" help:"Enables Fargate container metrics fetching. If enabled no metrics are collected from cadvisor or Docker. Defaults to false"`
+	Fargate    bool   `default:"false" help:"Enables Fargate container metrics fetching. If enabled no metrics are collected from cgroups or Docker. Defaults to false"`
 }
 
 const (
