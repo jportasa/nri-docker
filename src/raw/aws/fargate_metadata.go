@@ -72,7 +72,6 @@ type LimitsResponse struct {
 	Memory *int64   `json:"Memory,omitempty"`
 }
 
-
 // HealthStatus represents a container's health.
 type HealthStatus struct {
 	Status   string     `json:"status,omitempty"`
