@@ -174,9 +174,55 @@ func (e *FargateFetcher) BizMetricsFromDocker(containerID string, ds *docker.Sta
 
 	// Requires some calculation over past reading to be able to determine
 	// the percentages.
-	s.CPU = cpuFromDocker(containerID, e.latestFetch, ds.CPUStats, e.cpuStore)
+	s.CPU = e.cpuFromDocker(containerID, ds.CPUStats)
 
 	return s
+}
+
+func (e *FargateFetcher) cpuFromDocker(containerID string, dockerCPU docker.CPUStats) biz.CPU {
+	cpu := biz.CPU{}
+	// cpuStore current metrics to be the "previous" metrics in the next CPU sampling
+	defer func() {
+		previous.Time = e.latestFetch.Unix()
+		previous.CPU = dockerCPU
+		e.cpuStore.Set(containerID, previous)
+		if err := e.cpuStore.Save(); err != nil {
+			e.logger.Errorf("persisting previous metrics: %v", err)
+		}
+	}()
+
+	cpu.LimitCores = float64(dockerCPU.OnlineCPUs)
+
+	// Reading previous CPU stats
+	if _, err := e.cpuStore.Get(containerID, &previous); err != nil {
+		e.logger.Debugf("could not retrieve previous CPU stats for container %v: %v", containerID, err)
+		return cpu
+	}
+
+	// calculate the change for the cpu usage of the container in between readings
+	durationNS := float64(time.Now().Sub(time.Unix(previous.Time, 0)).Nanoseconds())
+	if durationNS <= 0 {
+		return cpu
+	}
+
+	maxVal := float64(len(dockerCPU.CPUUsage.PercpuUsage) * 100)
+
+	cpu.CPUPercent = cpuPercent(previous.CPU, dockerCPU)
+
+	userDelta := float64(dockerCPU.CPUUsage.UsageInUsermode - previous.CPU.CPUUsage.UsageInUsermode)
+	cpu.UserPercent = math.Min(maxVal, userDelta*100/durationNS)
+
+	kernelDelta := float64(dockerCPU.CPUUsage.UsageInKernelmode - previous.CPU.CPUUsage.UsageInKernelmode)
+	cpu.KernelPercent = math.Min(maxVal, kernelDelta*100/durationNS)
+
+	cpu.UsedCores = float64(dockerCPU.CPUUsage.TotalUsage-previous.CPU.CPUUsage.TotalUsage) / durationNS
+
+	cpu.ThrottlePeriods = dockerCPU.ThrottlingData.ThrottledPeriods
+	cpu.ThrottledTimeMS = float64(dockerCPU.ThrottlingData.ThrottledTime) / float64(time.Second)
+
+	cpu.UsedCoresPercent = 100 * cpu.UsedCores / cpu.LimitCores
+
+	return cpu
 }
 
 func blkIOFromDocker(io docker.BlkioStats) biz.BlkIO {
@@ -209,52 +255,6 @@ func blkIOFromDocker(io docker.BlkioStats) biz.BlkIO {
 var previous struct {
 	Time int64
 	CPU  docker.CPUStats
-}
-
-func cpuFromDocker(containerID string, fetchTime time.Time, dockerCPU docker.CPUStats, store persist.Storer) biz.CPU {
-	cpu := biz.CPU{}
-	// cpuStore current metrics to be the "previous" metrics in the next CPU sampling
-	defer func() {
-		previous.Time = fetchTime.Unix()
-		previous.CPU = dockerCPU
-		store.Set(containerID, previous)
-		if err := store.Save(); err != nil {
-			log.Error("persisting previous metrics: %v", err)
-		}
-	}()
-
-	cpu.LimitCores = float64(dockerCPU.OnlineCPUs)
-
-	// Reading previous CPU stats
-	if _, err := store.Get(containerID, &previous); err != nil {
-		log.Debug("could not retrieve previous CPU stats for container %v: %v", containerID, err)
-		return cpu
-	}
-
-	// calculate the change for the cpu usage of the container in between readings
-	durationNS := float64(time.Now().Sub(time.Unix(previous.Time, 0)).Nanoseconds())
-	if durationNS <= 0 {
-		return cpu
-	}
-
-	maxVal := float64(len(dockerCPU.CPUUsage.PercpuUsage) * 100)
-
-	cpu.CPUPercent = cpuPercent(previous.CPU, dockerCPU)
-
-	userDelta := float64(dockerCPU.CPUUsage.UsageInUsermode - previous.CPU.CPUUsage.UsageInUsermode)
-	cpu.UserPercent = math.Min(maxVal, userDelta*100/durationNS)
-
-	kernelDelta := float64(dockerCPU.CPUUsage.UsageInKernelmode - previous.CPU.CPUUsage.UsageInKernelmode)
-	cpu.KernelPercent = math.Min(maxVal, kernelDelta*100/durationNS)
-
-	cpu.UsedCores = float64(dockerCPU.CPUUsage.TotalUsage-previous.CPU.CPUUsage.TotalUsage) / durationNS
-
-	cpu.ThrottlePeriods = dockerCPU.ThrottlingData.ThrottledPeriods
-	cpu.ThrottledTimeMS = float64(dockerCPU.ThrottlingData.ThrottledTime) / float64(time.Second)
-
-	cpu.UsedCoresPercent = 100 * cpu.UsedCores / cpu.LimitCores
-
-	return cpu
 }
 
 func cpuPercent(previous, current docker.CPUStats) float64 {
