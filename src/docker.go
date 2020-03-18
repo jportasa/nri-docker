@@ -14,6 +14,7 @@ type argumentList struct {
 	NriCluster string `default:"" help:"Optional. Cluster name"`
 	HostRoot   string `default:"/host" help:"If the integration is running from a container, the mounted folder pointing to the host root folder"`
 	CgroupPath string `default:"" help:"Optional. The path where cgroup is mounted."`
+	Fargate    bool   `default:"false" help:"Enables Fargate container metrics fetching. If enabled no metrics are collected from cadvisor or Docker. Defaults to false"`
 }
 
 const (
@@ -35,12 +36,17 @@ func main() {
 
 	log.SetupLogging(args.Verbose)
 
-	cs, err := nri.NewSampler(args.HostRoot, args.CgroupPath)
-	exitOnErr(err)
-
-	exitOnErr(cs.SampleAll(i))
-
-	exitOnErr(i.Publish())
+	if args.Fargate {
+		cs := nri.FargateSampler{}
+		exitOnErr(err)
+		exitOnErr(cs.SampleAll(i))
+		exitOnErr(i.Publish())
+	} else {
+		cs, err := nri.NewSampler(args.HostRoot, args.CgroupPath)
+		exitOnErr(err)
+		exitOnErr(cs.SampleAll(i))
+		exitOnErr(i.Publish())
+	}
 }
 
 func exitOnErr(err error) {
