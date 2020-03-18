@@ -96,7 +96,7 @@ func (e *FargateFetcher) fetchTaskResponse(taskResponse *TaskResponse) error {
 }
 
 func containerResponseToDocker(container ContainerResponse) docker.Container {
-	c :=  docker.Container{
+	c := docker.Container{
 		ID:      container.ID,
 		Names:   []string{container.Name},
 		Image:   container.Image,
