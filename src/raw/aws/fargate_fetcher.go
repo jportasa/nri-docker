@@ -62,7 +62,7 @@ func (e *FargateFetcher) InspectContainer(containerID string) (docker.Container,
 	// Try to load container from the cache cpuStore.
 	_, err := e.containerStore.Get(containerID, &containerResponse)
 	if err == nil {
-		e.logger.Infof("found container %s in cache cpuStore", containerID)
+		e.logger.Debugf("found container %s in cache cpuStore", containerID)
 		return containerResponseToDocker(containerResponse), nil
 	}
 
@@ -101,7 +101,7 @@ func (e *FargateFetcher) fetchTaskResponse(taskResponse *TaskResponse) error {
 	if err != nil {
 		return fmt.Errorf("error unmarshalling ECS task: %v", err)
 	}
-	e.logger.Infof("task metadata response from %s: %s", endpoint, string(response))
+	e.logger.Debugf("task metadata response from %s: %s", endpoint, string(response))
 	return nil
 }
 
@@ -144,7 +144,7 @@ func (e *FargateFetcher) GetContainerMetrics() (*FargateStats, error) {
 	if err != nil {
 		return nil, fmt.Errorf("error unmarshalling ECS container: %v", err)
 	}
-	e.logger.Infof("container metrics response from %s: %s", endpoint, string(response))
+	e.logger.Debugf("container metrics response from %s: %s", endpoint, string(response))
 
 	return &stats, nil
 }
