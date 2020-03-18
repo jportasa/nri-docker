@@ -21,9 +21,9 @@ type FargateStats map[string]*docker.Stats
 
 // FargateFetcher fetches metrics from Fargate endpoints in AWS ECS.
 type FargateFetcher struct {
-	client *http.Client
-	store  persist.Storer
-	logger log.Logger
+	client      *http.Client
+	store       persist.Storer
+	logger      log.Logger
 	latestFetch time.Time
 }
 
