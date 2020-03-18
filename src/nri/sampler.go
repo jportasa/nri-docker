@@ -54,7 +54,7 @@ func NewSampler(hostRoot, cgroupPath string) (*ContainerSampler, error) {
 		log.NewStdErr(true),
 		60*time.Second)
 	if err != nil {
-		return &ContainerSampler{}, err
+		return nil, err
 	}
 
 	// Raw metrics fetcher to get the raw metrics from the system (cgroups and proc fs)

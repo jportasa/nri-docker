@@ -179,6 +179,11 @@ func (e *FargateFetcher) BizMetricsFromDocker(containerID string, ds *docker.Sta
 	return s
 }
 
+var previous struct {
+	Time int64
+	CPU  docker.CPUStats
+}
+
 func (e *FargateFetcher) cpuFromDocker(containerID string, dockerCPU docker.CPUStats) biz.CPU {
 	cpu := biz.CPU{}
 	// cpuStore current metrics to be the "previous" metrics in the next CPU sampling
@@ -250,11 +255,6 @@ func blkIOFromDocker(io docker.BlkioStats) biz.BlkIO {
 		}
 	}
 	return bio
-}
-
-var previous struct {
-	Time int64
-	CPU  docker.CPUStats
 }
 
 func cpuPercent(previous, current docker.CPUStats) float64 {
