@@ -71,8 +71,8 @@ func (e *FargateFetcher) InspectContainer(containerID string) (docker.Container,
 	return docker.Container{}, nil
 }
 
-func (e * FargateFetcher) fetchTaskResponse(taskResponse *TaskResponse) error  {
-	endpoint, ok := TaskStatsEndpoint()
+func (e *FargateFetcher) fetchTaskResponse(taskResponse *TaskResponse) error {
+	endpoint, ok := TaskMetadataEndpoint()
 	if !ok {
 		return errors.New("could not find ECS container metadata URI")
 	}
@@ -96,13 +96,13 @@ func (e * FargateFetcher) fetchTaskResponse(taskResponse *TaskResponse) error  {
 
 func containerResponseToDocker(container ContainerResponse) docker.Container {
 	return docker.Container{
-		ID:         container.ID,
-		Names:      []string{container.Name},
-		Image:      container.Image,
-		ImageID:    container.ImageID,
-		Created:    container.CreatedAt.Unix(),
-		Labels:     container.Labels,
-		Status:     container.KnownStatus,
+		ID:      container.ID,
+		Names:   []string{container.Name},
+		Image:   container.Image,
+		ImageID: container.ImageID,
+		Created: container.CreatedAt.Unix(),
+		Labels:  container.Labels,
+		Status:  container.KnownStatus,
 	}
 }
 
