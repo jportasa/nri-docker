@@ -14,6 +14,7 @@ type argumentList struct {
 	NriCluster string `default:"" help:"Optional. Cluster name"`
 	HostRoot   string `default:"/host" help:"If the integration is running from a container, the mounted folder pointing to the host root folder"`
 	CgroupPath string `default:"" help:"Optional. The path where cgroup is mounted."`
+	Fargate    bool   `default:"false" help:"Enables Fargate container metrics fetching. If enabled no metrics are collected from cgroups or Docker. Defaults to false"`
 }
 
 const (
@@ -25,6 +26,11 @@ var (
 	args argumentList
 )
 
+// Sampler abstracts away different types that can sample that through an integration.Integration instance.
+type Sampler interface {
+	SampleAll(*integration.Integration) error
+}
+
 func main() {
 	// Create Integration
 	i, err := integration.New(integrationName, integrationVersion, integration.Args(&args))
@@ -35,11 +41,15 @@ func main() {
 
 	log.SetupLogging(args.Verbose)
 
-	cs, err := nri.NewSampler(args.HostRoot, args.CgroupPath)
-	exitOnErr(err)
+	var sampler Sampler
 
-	exitOnErr(cs.SampleAll(i))
-
+	if args.Fargate {
+		sampler = &nri.FargateSampler{}
+	} else {
+		sampler, err = nri.NewSampler(args.HostRoot, args.CgroupPath)
+		exitOnErr(err)
+	}
+	exitOnErr(sampler.SampleAll(i))
 	exitOnErr(i.Publish())
 }
 
